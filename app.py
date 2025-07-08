@@ -206,6 +206,31 @@ def clear_session():
         logger.error(f"Error clearing session: {str(e)}")
         return jsonify({'error': f'Failed to clear session: {str(e)}'}), 500
 
+@app.route('/debug-stock-sample')
+def debug_stock_sample():
+    """Debug endpoint to check stock data sample"""
+    try:
+        # Load session stock data
+        stock_master_service._try_load_session_data()
+        stock_data = stock_master_service.get_stock_data()
+
+        if not stock_data:
+            return jsonify({'error': 'No stock data loaded'})
+
+        # Return sample of stock data for debugging
+        sample_size = min(10, len(stock_data))
+        sample_data = stock_data[:sample_size]
+
+        return jsonify({
+            'total_records': len(stock_data),
+            'sample_records': sample_data,
+            'first_product_code': stock_data[0].get('product_code', 'N/A') if stock_data else 'N/A',
+            'categories_sample': [item.get('main_category', 'N/A') for item in stock_data[:5]]
+        })
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Create necessary directories
     os.makedirs('uploads', exist_ok=True)
