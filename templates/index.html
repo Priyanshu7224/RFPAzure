@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered RFP BOM Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- HOSHO Digital Header -->
+    <header class="hosho-header">
+        <div class="container">
+            <div class="hosho-header-content">
+                <div class="hosho-logo-section">
+                    <img src="{{ url_for('static', filename='images/hosho-logo.svg') }}" alt="HOSHO Digital" class="hosho-logo">
+                    <div class="hosho-brand">
+                        <h1 class="hosho-title">HOSHO Digital</h1>
+                        <p class="hosho-tagline">Digital Transformation Solutions</p>
+                    </div>
+                </div>
+                <nav class="hosho-nav">
+                    <a href="#" class="nav-link">Solutions</a>
+                    <a href="#" class="nav-link">Services</a>
+                    <a href="#" class="nav-link">About</a>
+                    <a href="#" class="nav-link">Contact</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Application Header -->
+        <header class="app-header">
+            <div class="app-header-content">
+                <h1 class="app-title">
+                    <i class="fas fa-robot"></i>
+                    AI-Powered RFP BOM Generator
+                </h1>
+                <p class="app-subtitle">Intelligent Request for Proposal Processing with Azure OpenAI</p>
+                <div class="powered-by">
+                    <span>Powered by</span>
+                    <img src="{{ url_for('static', filename='images/hosho-logo.svg') }}" alt="HOSHO Digital" class="powered-logo">
+                    <span>HOSHO Digital</span>
+                </div>
+
+                <!-- Session Info (for debugging) -->
+                <div class="session-info" id="sessionInfo" style="display: none;">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="sessionDetails">Session: Loading...</span>
+                        <button class="btn-link" onclick="toggleSessionInfo()" style="margin-left: 10px;">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </small>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Step 1: Stock Master Upload -->
+            <section class="step-section" id="step1">
+                <div class="step-header">
+                    <span class="step-number">1</span>
+                    <h2>Upload Stock Master File</h2>
+                </div>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <p class="upload-text">Drag & drop your stock master file here or click to browse</p>
+                        <p class="upload-subtext">Supports Excel (.xlsx, .xls) and CSV files</p>
+                        <input type="file" id="stockFileInput" accept=".xlsx,.xls,.csv" hidden>
+                        <button class="btn btn-secondary" id="stockBrowseBtn">
+                            <i class="fas fa-folder-open"></i> Browse Files
+                        </button>
+                    </div>
+                </div>
+                <div class="upload-status" id="uploadStatus" style="display: none;"></div>
+            </section>
+
+            <!-- Step 2: RFP Input -->
+            <section class="step-section" id="step2" style="display: none;">
+                <div class="step-header">
+                    <span class="step-number">2</span>
+                    <h2>Enter RFP Line Items</h2>
+                </div>
+
+                <!-- RFP Input Options -->
+                <div class="rfp-input-options">
+                    <div class="input-option-tabs">
+                        <button class="tab-btn active" onclick="switchRFPInputMode('manual')" id="manualTab">
+                            <i class="fas fa-keyboard"></i> Manual Entry
+                        </button>
+                        <button class="tab-btn" onclick="switchRFPInputMode('file')" id="fileTab">
+                            <i class="fas fa-file-upload"></i> Upload File
+                        </button>
+                    </div>
+
+                    <!-- Manual Input -->
+                    <div class="rfp-input-content" id="manualInput">
+                        <div class="rfp-input-area">
+                            <textarea
+                                id="rfpInput"
+                                placeholder="Enter RFP line items (one per line)&#10;&#10;Example:&#10;6&quot; SCH40 SMLS PIPE API 5L X52 PSL2&#10;4&quot; 150# WNRF FLANGE A105&#10;90D LR ELBOW 6&quot; SCH40 A234 WPB"
+                                rows="10"
+                            ></textarea>
+                            <div class="input-actions">
+                                <button class="btn btn-secondary" onclick="clearRFPInput()">
+                                    <i class="fas fa-trash"></i> Clear
+                                </button>
+                                <button class="btn btn-primary" onclick="processRFP()" id="processBtn">
+                                    <i class="fas fa-cogs"></i> Process RFP
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="rfp-input-content" id="fileInput" style="display: none;">
+                        <div class="rfp-upload-area" id="rfpUploadArea">
+                            <div class="upload-content">
+                                <i class="fas fa-file-upload upload-icon"></i>
+                                <p class="upload-text">Upload your RFP file here</p>
+                                <p class="upload-subtext">Supports Excel (.xlsx, .xls), CSV, PDF, Word (.docx), and Text files</p>
+                                <input type="file" id="rfpFileInput" accept=".xlsx,.xls,.csv,.pdf,.docx,.txt" hidden>
+                                <button class="btn btn-secondary" id="rfpBrowseBtn">
+                                    <i class="fas fa-folder-open"></i> Browse Files
+                                </button>
+                            </div>
+                        </div>
+                        <div class="rfp-upload-status" id="rfpUploadStatus" style="display: none;"></div>
+
+                        <!-- Preview extracted items -->
+                        <div class="rfp-preview" id="rfpPreview" style="display: none;">
+                            <h4>Extracted RFP Items:</h4>
+                            <div class="preview-items" id="previewItems"></div>
+                            <div class="preview-actions">
+                                <button class="btn btn-secondary" onclick="editExtractedItems()">
+                                    <i class="fas fa-edit"></i> Edit Items
+                                </button>
+                                <button class="btn btn-primary" onclick="processExtractedRFP()" id="processExtractedBtn">
+                                    <i class="fas fa-cogs"></i> Process RFP
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 3: Results -->
+            <section class="step-section" id="step3" style="display: none;">
+                <div class="step-header">
+                    <span class="step-number">3</span>
+                    <h2>BOM Results</h2>
+                </div>
+                
+                <!-- Summary Cards -->
+                <div class="summary-cards" id="summaryCards">
+                    <!-- Summary cards will be populated by JavaScript -->
+                </div>
+
+                <!-- Results Table -->
+                <div class="results-container">
+                    <div class="results-header">
+                        <h3>Detailed Results</h3>
+                        <div class="results-actions">
+                            <button class="btn btn-secondary" onclick="exportBOM()" id="exportBtn">
+                                <i class="fas fa-download"></i> Export BOM
+                            </button>
+                            <button class="btn btn-secondary" onclick="startOver()">
+                                <i class="fas fa-redo"></i> Start Over
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="results-table" id="resultsTable">
+                            <thead>
+                                <tr>
+                                    <th>Line</th>
+                                    <th>Original RFP Item</th>
+                                    <th>Status</th>
+                                    <th>Matched Product</th>
+                                    <th>Description</th>
+                                    <th>Score</th>
+                                    <th>Qty</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBody">
+                                <!-- Results will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p class="loading-text">Processing RFP items with AI...</p>
+                <p class="loading-subtext">This may take a few moments</p>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+    <!-- HOSHO Digital Footer -->
+    <footer class="hosho-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-brand">
+                        <img src="{{ url_for('static', filename='images/hosho-logo.svg') }}" alt="HOSHO Digital" class="footer-logo">
+                        <div class="footer-brand-text">
+                            <h3>HOSHO Digital</h3>
+                            <p>Leading Digital Transformation Solutions</p>
+                        </div>
+                    </div>
+                    <p class="footer-description">
+                        Empowering businesses with cutting-edge AI and digital solutions.
+                        Transforming industries through intelligent automation and innovation.
+                    </p>
+                </div>
+
+                <div class="footer-section">
+                    <h4>Solutions</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">AI & Machine Learning</a></li>
+                        <li><a href="#">Process Automation</a></li>
+                        <li><a href="#">Digital Transformation</a></li>
+                        <li><a href="#">Custom Software Development</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h4>Services</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Consulting</a></li>
+                        <li><a href="#">Implementation</a></li>
+                        <li><a href="#">Support & Maintenance</a></li>
+                        <li><a href="#">Training</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h4>Contact</h4>
+                    <div class="contact-info">
+                        <p><i class="fas fa-envelope"></i> info@hoshodigital.com</p>
+                        <p><i class="fas fa-phone"></i> +1 (555) 123-4567</p>
+                        <p><i class="fas fa-map-marker-alt"></i> Singapore</p>
+                    </div>
+                    <div class="social-links">
+                        <a href="#" class="social-link"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-github"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <div class="footer-bottom-content">
+                    <p>&copy; 2025 HOSHO Digital Pte. Ltd. All rights reserved.</p>
+                    <div class="footer-bottom-links">
+                        <a href="#">Privacy Policy</a>
+                        <a href="#">Terms of Service</a>
+                        <a href="#">Cookie Policy</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Chat Interface (Optional Enhancement) -->
+    <div class="chat-toggle" onclick="toggleChat()">
+        <i class="fas fa-comments"></i>
+    </div>
+
+    <div class="chat-interface" id="chatInterface" style="display: none;">
+        <div class="chat-header">
+            <h4>AI Assistant</h4>
+            <button class="chat-close" onclick="toggleChat()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-message bot-message">
+                <div class="message-content">
+                    Hello! I'm your AI assistant for RFP processing. How can I help you today?
+                </div>
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Ask me about RFP processing..." onkeypress="handleChatKeyPress(event)">
+            <button onclick="sendChatMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

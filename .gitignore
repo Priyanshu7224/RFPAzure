@@ -1,0 +1,50 @@
+# Environments - NEVER commit these files!
+.env
+.env.local
+.env.production
+.env.staging
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+
+# Azure deployment files
+azure-deployment/
+*.zip
+
+# Local uploads and exports
+uploads/
+exports/
+
+# Test files
+test_*.csv
+test_*.xlsx
+
+# Virtual environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
