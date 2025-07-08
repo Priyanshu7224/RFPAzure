@@ -24,6 +24,7 @@ class AzureOpenAIService:
                 logger.info(f"Initializing Azure OpenAI client with endpoint: {self.endpoint}")
                 logger.info(f"Using deployment: {self.deployment_name}, API version: {self.api_version}")
 
+                # Initialize with minimal parameters to avoid conflicts
                 self.client = AzureOpenAI(
                     api_key=self.api_key,
                     api_version=self.api_version,

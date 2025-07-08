@@ -323,7 +323,7 @@ def force_ai_init():
             }
         }
 
-        # Step 1: Try to create client
+        # Step 1: Try to create client with minimal parameters
         try:
             result['step'] = 'creating_client'
             client = AzureOpenAI(
