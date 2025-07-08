@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import tempfile
 import pandas as pd
 from typing import List, Dict, Any
 from werkzeug.datastructures import FileStorage
@@ -29,9 +30,14 @@ class RFPFileProcessor:
             if file_ext not in self.supported_extensions:
                 raise ValueError(f"Unsupported file format: {file_ext}")
             
-            # Save file temporarily
-            temp_file_path = os.path.join('uploads', f"rfp_temp_{file.filename}")
+            # Create temporary file for processing (Azure App Services compatible)
+            file_extension = os.path.splitext(file.filename)[1]
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=file_extension)
+            temp_file_path = temp_file.name
+
+            # Save uploaded file to temporary location
             file.save(temp_file_path)
+            temp_file.close()
             
             logger.info(f"Processing RFP file: {file.filename}, size: {os.path.getsize(temp_file_path)} bytes")
             
@@ -68,8 +74,7 @@ class RFPFileProcessor:
         except Exception as e:
             logger.error(f"Error processing RFP file: {str(e)}")
             # Clean up temporary file if it exists
-            temp_file_path = os.path.join('uploads', f"rfp_temp_{file.filename}")
-            if os.path.exists(temp_file_path):
+            if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
             raise e
     

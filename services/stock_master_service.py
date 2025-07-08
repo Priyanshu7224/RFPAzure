@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import json
 import logging
+import tempfile
 from typing import Dict, List, Optional
 from werkzeug.datastructures import FileStorage
 import uuid
@@ -46,9 +47,14 @@ class StockMasterService:
             Dict with upload results
         """
         try:
-            # Save uploaded file temporarily
-            temp_file_path = os.path.join('uploads', f"temp_{file.filename}")
+            # Create temporary file for processing (Azure App Services compatible)
+            file_extension = os.path.splitext(file.filename)[1]
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=file_extension)
+            temp_file_path = temp_file.name
+
+            # Save uploaded file to temporary location
             file.save(temp_file_path)
+            temp_file.close()
 
             logger.info(f"Processing file: {file.filename}, size: {os.path.getsize(temp_file_path)} bytes")
 
