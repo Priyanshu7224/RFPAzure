@@ -390,6 +390,40 @@ def force_ai_init():
             'step': 'import_error',
             'error': f"{type(e).__name__}: {str(e)}"
         })
+
+@app.route('/test-ai-response')
+def test_ai_response():
+    """Test Azure OpenAI response format"""
+    try:
+        ai_service = AzureOpenAIService()
+
+        if ai_service.use_mock:
+            return jsonify({'error': 'AI service is using mock responses'})
+
+        # Test with a simple RFP item
+        test_rfp = "PIPE, SCH 40, WELDED, BE, API 5L GR. B, to ASME B36.10M"
+        test_stock = [{
+            "product_code": "1CALWFXS16",
+            "description": "406.4 X 12.70 X 6000MM 16\" XS/SCH40 BE | ERW WELDED PIPE API 5L GR.B",
+            "main_category": "PIPE",
+            "on_hand_quantity": 0
+        }]
+
+        # Get raw response
+        result = ai_service.match_rfp_item(test_rfp, test_stock)
+
+        return jsonify({
+            'test_rfp': test_rfp,
+            'test_stock': test_stock,
+            'ai_result': result,
+            'success': True
+        })
+
+    except Exception as e:
+        return jsonify({
+            'error': f"{type(e).__name__}: {str(e)}",
+            'success': False
+        })
     except Exception as e:
         logger.error(f"Error in debug endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500

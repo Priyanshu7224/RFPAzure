@@ -41,7 +41,7 @@ class AzureOpenAIService:
                             self.deployment_name = deployment_name
 
                         def create(self, model, messages, max_tokens=100, temperature=0.1, response_format=None):
-                            # Use the v0.28 API
+                            # Use the v0.28 API (response_format not supported in v0.28)
                             response = openai.ChatCompletion.create(
                                 engine=self.deployment_name,
                                 messages=messages,
@@ -120,7 +120,7 @@ class AzureOpenAIService:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a highly knowledgeable industrial procurement assistant trained to interpret messy or semi-structured RFP line items. Your job is to find the most relevant product from the given stock master entries using the bucket-based search strategy."
+                        "content": "You are a highly knowledgeable industrial procurement assistant trained to interpret messy or semi-structured RFP line items. Your job is to find the most relevant product from the given stock master entries using the bucket-based search strategy. IMPORTANT: Always respond with valid JSON format only."
                     },
                     {
                         "role": "user",
@@ -128,11 +128,32 @@ class AzureOpenAIService:
                     }
                 ],
                 max_tokens=500,
-                temperature=0.1,
-                response_format={"type": "json_object"}
+                temperature=0.1
+                # Note: response_format not supported in OpenAI v0.28
             )
 
-            result = json.loads(response.choices[0].message.content)
+            # Get the response content
+            response_content = response.choices[0].message.content
+            logger.info(f"Raw Azure OpenAI response: {response_content}")
+
+            # Try to parse JSON with better error handling
+            try:
+                result = json.loads(response_content)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse JSON response: {e}")
+                logger.error(f"Response content: {response_content}")
+
+                # Try to extract JSON from the response if it's wrapped in text
+                import re
+                json_match = re.search(r'\{.*\}', response_content, re.DOTALL)
+                if json_match:
+                    try:
+                        result = json.loads(json_match.group())
+                        logger.info("Successfully extracted JSON from response")
+                    except json.JSONDecodeError:
+                        raise ValueError(f"Could not parse JSON from response: {response_content}")
+                else:
+                    raise ValueError(f"No JSON found in response: {response_content}")
 
             # Validate the response format
             required_fields = ['matched_product_code', 'matched_description', 'match_score', 'match_reason']
@@ -186,7 +207,7 @@ Handle common format variations:
 ### Stock Master Entries (JSON List):
 {stock_entries_json}
 
-### Desired Output Format (JSON):
+### IMPORTANT: Respond with ONLY valid JSON in this exact format:
 {{
   "matched_product_code": "...",
   "matched_description": "...",
@@ -195,7 +216,7 @@ Handle common format variations:
   "match_reason": "..."
 }}
 
-Provide a match score from 0-100 based on how well the RFP item matches the stock entry. Include detailed reasoning explaining which buckets were matched and any format conversions applied."""
+Do not include any text before or after the JSON. Provide a match score from 0-100 based on how well the RFP item matches the stock entry. Include detailed reasoning explaining which buckets were matched and any format conversions applied."""
         
         return prompt
 
