@@ -21,13 +21,31 @@ class AzureOpenAIService:
         if not self.use_mock:
             try:
                 from openai import AzureOpenAI
+                logger.info(f"Initializing Azure OpenAI client with endpoint: {self.endpoint}")
+                logger.info(f"Using deployment: {self.deployment_name}, API version: {self.api_version}")
+
                 self.client = AzureOpenAI(
                     api_key=self.api_key,
                     api_version=self.api_version,
                     azure_endpoint=self.endpoint
                 )
+                logger.info("Azure OpenAI client initialized successfully")
+
+                # Test the client with a simple call
+                test_response = self.client.chat.completions.create(
+                    model=self.deployment_name,
+                    messages=[{"role": "user", "content": "test"}],
+                    max_tokens=5
+                )
+                logger.info("Azure OpenAI client test successful")
+
+            except ImportError as e:
+                logger.error(f"Failed to import openai package: {e}. Using mock responses.")
+                self.use_mock = True
             except Exception as e:
-                logger.warning(f"Failed to initialize Azure OpenAI client: {e}. Using mock responses.")
+                logger.error(f"Failed to initialize Azure OpenAI client: {e}. Using mock responses.")
+                logger.error(f"Error type: {type(e).__name__}")
+                logger.error(f"Error details: {str(e)}")
                 self.use_mock = True
     
     def test_connection(self) -> bool:

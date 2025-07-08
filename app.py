@@ -272,7 +272,7 @@ def debug_ai_config():
         test_result = None
         test_error = None
         try:
-            if not azure_openai_service.use_mock:
+            if not azure_openai_service.use_mock and azure_openai_service.client:
                 test_response = azure_openai_service.client.chat.completions.create(
                     model=azure_openai_service.deployment_name,
                     messages=[{"role": "user", "content": "Say 'AI is working'"}],
@@ -280,9 +280,9 @@ def debug_ai_config():
                 )
                 test_result = test_response.choices[0].message.content
             else:
-                test_result = "Using mock responses"
+                test_result = "Using mock responses - client not initialized"
         except Exception as e:
-            test_error = str(e)
+            test_error = f"{type(e).__name__}: {str(e)}"
 
         return jsonify({
             'ai_configuration': ai_config,
