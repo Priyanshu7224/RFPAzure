@@ -323,15 +323,61 @@ def force_ai_init():
             }
         }
 
-        # Step 1: Try to create client with minimal parameters
+        # Step 1: Try to create client with multiple methods
         try:
             result['step'] = 'creating_client'
-            client = AzureOpenAI(
-                api_key=api_key,
-                api_version=api_version,
-                azure_endpoint=endpoint
-            )
-            result['client_created'] = True
+            client = None
+
+            # Method 1: Standard approach
+            try:
+                client = AzureOpenAI(
+                    api_key=api_key,
+                    api_version=api_version,
+                    azure_endpoint=endpoint
+                )
+                result['method'] = 'standard'
+            except Exception as e:
+                result['standard_error'] = str(e)
+
+                # Method 2: Legacy approach
+                try:
+                    import openai
+                    openai.api_type = "azure"
+                    openai.api_key = api_key
+                    openai.api_base = endpoint
+                    openai.api_version = api_version
+
+                    # Create wrapper
+                    class SimpleWrapper:
+                        def __init__(self, deployment):
+                            self.deployment = deployment
+                        class Chat:
+                            def __init__(self, deployment):
+                                self.deployment = deployment
+                            class Completions:
+                                def __init__(self, deployment):
+                                    self.deployment = deployment
+                                def create(self, model, messages, max_tokens=5):
+                                    return openai.ChatCompletion.create(
+                                        engine=self.deployment,
+                                        messages=messages,
+                                        max_tokens=max_tokens
+                                    )
+                            @property
+                            def completions(self):
+                                return self.Completions(self.deployment)
+                        @property
+                        def chat(self):
+                            return self.Chat(self.deployment)
+
+                    client = SimpleWrapper(deployment_name)
+                    result['method'] = 'legacy'
+                except Exception as e2:
+                    result['legacy_error'] = str(e2)
+                    raise Exception(f"Both methods failed: {e}, {e2}")
+
+            if client:
+                result['client_created'] = True
         except Exception as e:
             result['client_error'] = f"{type(e).__name__}: {str(e)}"
             return jsonify(result)

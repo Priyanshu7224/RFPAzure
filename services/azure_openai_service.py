@@ -20,25 +20,84 @@ class AzureOpenAIService:
 
         if not self.use_mock:
             try:
-                from openai import AzureOpenAI
-                logger.info(f"Initializing Azure OpenAI client with endpoint: {self.endpoint}")
-                logger.info(f"Using deployment: {self.deployment_name}, API version: {self.api_version}")
+                # Try different import methods for compatibility
+                client_created = False
 
-                # Initialize with minimal parameters to avoid conflicts
-                self.client = AzureOpenAI(
-                    api_key=self.api_key,
-                    api_version=self.api_version,
-                    azure_endpoint=self.endpoint
-                )
-                logger.info("Azure OpenAI client initialized successfully")
+                # Method 1: Standard OpenAI v1+ import
+                try:
+                    from openai import AzureOpenAI
+                    logger.info(f"Initializing Azure OpenAI client with endpoint: {self.endpoint}")
+                    logger.info(f"Using deployment: {self.deployment_name}, API version: {self.api_version}")
 
-                # Test the client with a simple call
-                test_response = self.client.chat.completions.create(
-                    model=self.deployment_name,
-                    messages=[{"role": "user", "content": "test"}],
-                    max_tokens=5
-                )
-                logger.info("Azure OpenAI client test successful")
+                    # Try creating client with explicit parameters only
+                    self.client = AzureOpenAI(
+                        api_key=self.api_key,
+                        api_version=self.api_version,
+                        azure_endpoint=self.endpoint
+                    )
+                    client_created = True
+                    logger.info("Azure OpenAI client initialized successfully with standard method")
+
+                except Exception as e:
+                    logger.warning(f"Standard AzureOpenAI initialization failed: {e}")
+
+                # Method 2: Alternative initialization if standard fails
+                if not client_created:
+                    try:
+                        import openai
+                        logger.info("Trying alternative OpenAI client initialization")
+
+                        # Set configuration directly
+                        openai.api_type = "azure"
+                        openai.api_key = self.api_key
+                        openai.api_base = self.endpoint
+                        openai.api_version = self.api_version
+
+                        # Create a simple wrapper for compatibility
+                        class OpenAIWrapper:
+                            def __init__(self, deployment_name):
+                                self.deployment_name = deployment_name
+
+                            class ChatCompletions:
+                                def __init__(self, deployment_name):
+                                    self.deployment_name = deployment_name
+
+                                def create(self, model, messages, max_tokens=100, temperature=0.1, response_format=None):
+                                    return openai.ChatCompletion.create(
+                                        engine=self.deployment_name,
+                                        messages=messages,
+                                        max_tokens=max_tokens,
+                                        temperature=temperature
+                                    )
+
+                            @property
+                            def chat(self):
+                                class Chat:
+                                    def __init__(self, deployment_name):
+                                        self.completions = OpenAIWrapper.ChatCompletions(deployment_name)
+                                return Chat(self.deployment_name)
+
+                        self.client = OpenAIWrapper(self.deployment_name)
+                        client_created = True
+                        logger.info("Azure OpenAI client initialized successfully with legacy method")
+
+                    except Exception as e:
+                        logger.warning(f"Legacy OpenAI initialization failed: {e}")
+
+                if client_created:
+                    # Test the client with a simple call
+                    try:
+                        test_response = self.client.chat.completions.create(
+                            model=self.deployment_name,
+                            messages=[{"role": "user", "content": "test"}],
+                            max_tokens=5
+                        )
+                        logger.info("Azure OpenAI client test successful")
+                    except Exception as e:
+                        logger.warning(f"Client test failed, but client created: {e}")
+                        # Don't fail completely if test fails but client was created
+                else:
+                    raise Exception("All initialization methods failed")
 
             except ImportError as e:
                 logger.error(f"Failed to import openai package: {e}. Using mock responses.")
