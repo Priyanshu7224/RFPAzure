@@ -297,6 +297,66 @@ def debug_ai_config():
             }
         })
     except Exception as e:
+        logger.error(f"Error in AI debug endpoint: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/force-ai-init')
+def force_ai_init():
+    """Force Azure OpenAI initialization and capture detailed errors"""
+    try:
+        import os
+        from openai import AzureOpenAI
+
+        # Get configuration
+        api_key = os.getenv('AZURE_OPENAI_API_KEY')
+        endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
+        api_version = os.getenv('AZURE_OPENAI_API_VERSION', '2023-12-01-preview')
+        deployment_name = os.getenv('AZURE_OPENAI_DEPLOYMENT_NAME', 'gpt-4')
+
+        result = {
+            'step': 'starting',
+            'config': {
+                'api_key_length': len(api_key) if api_key else 0,
+                'endpoint': endpoint,
+                'api_version': api_version,
+                'deployment_name': deployment_name
+            }
+        }
+
+        # Step 1: Try to create client
+        try:
+            result['step'] = 'creating_client'
+            client = AzureOpenAI(
+                api_key=api_key,
+                api_version=api_version,
+                azure_endpoint=endpoint
+            )
+            result['client_created'] = True
+        except Exception as e:
+            result['client_error'] = f"{type(e).__name__}: {str(e)}"
+            return jsonify(result)
+
+        # Step 2: Try to make a test call
+        try:
+            result['step'] = 'testing_call'
+            response = client.chat.completions.create(
+                model=deployment_name,
+                messages=[{"role": "user", "content": "test"}],
+                max_tokens=5
+            )
+            result['test_success'] = True
+            result['test_response'] = response.choices[0].message.content
+        except Exception as e:
+            result['test_error'] = f"{type(e).__name__}: {str(e)}"
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({
+            'step': 'import_error',
+            'error': f"{type(e).__name__}: {str(e)}"
+        })
+    except Exception as e:
         logger.error(f"Error in debug endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
