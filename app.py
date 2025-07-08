@@ -251,6 +251,55 @@ def debug_stock_sample():
         logger.error(f"Error in debug endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/debug-ai-config')
+def debug_ai_config():
+    """Debug endpoint to check Azure OpenAI configuration"""
+    try:
+        # Get AI service configuration
+        ai_config = {
+            'api_key_configured': bool(azure_openai_service.api_key),
+            'endpoint': azure_openai_service.endpoint,
+            'api_version': azure_openai_service.api_version,
+            'deployment_name': azure_openai_service.deployment_name,
+            'use_mock': azure_openai_service.use_mock,
+            'client_initialized': azure_openai_service.client is not None
+        }
+
+        # Test connection
+        connection_test = azure_openai_service.test_connection()
+
+        # Test a simple AI call
+        test_result = None
+        test_error = None
+        try:
+            if not azure_openai_service.use_mock:
+                test_response = azure_openai_service.client.chat.completions.create(
+                    model=azure_openai_service.deployment_name,
+                    messages=[{"role": "user", "content": "Say 'AI is working'"}],
+                    max_tokens=10
+                )
+                test_result = test_response.choices[0].message.content
+            else:
+                test_result = "Using mock responses"
+        except Exception as e:
+            test_error = str(e)
+
+        return jsonify({
+            'ai_configuration': ai_config,
+            'connection_test': connection_test,
+            'simple_test_result': test_result,
+            'simple_test_error': test_error,
+            'environment_variables': {
+                'AZURE_OPENAI_API_KEY': 'Set' if os.getenv('AZURE_OPENAI_API_KEY') else 'Missing',
+                'AZURE_OPENAI_ENDPOINT': os.getenv('AZURE_OPENAI_ENDPOINT', 'Missing'),
+                'AZURE_OPENAI_DEPLOYMENT_NAME': os.getenv('AZURE_OPENAI_DEPLOYMENT_NAME', 'Missing'),
+                'AZURE_OPENAI_API_VERSION': os.getenv('AZURE_OPENAI_API_VERSION', 'Missing')
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Create necessary directories
     os.makedirs('uploads', exist_ok=True)
