@@ -94,9 +94,10 @@ class StockMasterService:
             column_mapping = {
                 'product_code': ['prd_code', 'product_code', 'item_code', 'code', 'part_number', 'part_no', 'partno', 'item_no', 'itemno', 'product_id'],
                 'description': ['prd_desc1', 'prd_desc2', 'maindesc', 'description', 'item_description', 'desc', 'product_description', 'item_desc', 'product_desc', 'name', 'item_name'],
+                'main_category': ['maincategory', 'main_category', 'category', 'product_category', 'item_category', 'type', 'product_type', 'class', 'group'],
                 'material': ['material', 'material_grade', 'grade', 'material_spec', 'mat', 'material_type'],
                 'size': ['size', 'nominal_size', 'pipe_size', 'diameter', 'dim', 'dimension'],
-                'specification': ['specification', 'spec', 'standard', 'norm', 'std', 'maincategory'],
+                'specification': ['specification', 'spec', 'standard', 'norm', 'std'],
                 'on_hand_quantity': ['onhand', 'on_hand_quantity', 'quantity', 'qty', 'stock_qty', 'available_qty', 'stock', 'inventory', 'balance'],
                 'unit_price': ['unit_price', 'price', 'cost', 'rate', 'unit_cost'],
                 'unit': ['uom', 'unit', 'unit_of_measure', 'units'],

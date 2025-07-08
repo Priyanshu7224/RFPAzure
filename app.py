@@ -221,11 +221,22 @@ def debug_stock_sample():
         sample_size = min(10, len(stock_data))
         sample_data = stock_data[:sample_size]
 
+        # Get all unique keys from the first few records to see field structure
+        all_keys = set()
+        for item in stock_data[:5]:
+            all_keys.update(item.keys())
+
         return jsonify({
             'total_records': len(stock_data),
             'sample_records': sample_data,
             'first_product_code': stock_data[0].get('product_code', 'N/A') if stock_data else 'N/A',
-            'categories_sample': [item.get('main_category', 'N/A') for item in stock_data[:5]]
+            'categories_sample': [item.get('main_category', 'N/A') for item in stock_data[:5]],
+            'all_fields': sorted(list(all_keys)),
+            'field_analysis': {
+                'has_main_category': any('main_category' in item for item in stock_data[:10]),
+                'has_maincategory': any('maincategory' in item for item in stock_data[:10]),
+                'has_category': any('category' in item for item in stock_data[:10])
+            }
         })
     except Exception as e:
         logger.error(f"Error in debug endpoint: {str(e)}")
