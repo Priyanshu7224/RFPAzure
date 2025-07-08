@@ -233,10 +233,16 @@ class RFPProcessor:
             # Create DataFrame
             df = pd.DataFrame(export_data)
             
+            # Create exports directory if it doesn't exist
+            exports_dir = 'exports'
+            if not os.path.exists(exports_dir):
+                os.makedirs(exports_dir)
+                logger.info(f"Created exports directory: {exports_dir}")
+
             # Generate filename with timestamp
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             filename = f'BOM_Export_{timestamp}.xlsx'
-            file_path = os.path.join('exports', filename)
+            file_path = os.path.join(exports_dir, filename)
             
             # Create Excel file with multiple sheets
             with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
