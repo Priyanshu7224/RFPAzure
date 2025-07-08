@@ -305,7 +305,6 @@ def force_ai_init():
     """Force Azure OpenAI initialization and capture detailed errors"""
     try:
         import os
-        from openai import AzureOpenAI
 
         # Get configuration
         api_key = os.getenv('AZURE_OPENAI_API_KEY')
@@ -323,61 +322,50 @@ def force_ai_init():
             }
         }
 
-        # Step 1: Try to create client with multiple methods
+        # Step 1: Initialize using OpenAI v0.28 API
         try:
             result['step'] = 'creating_client'
-            client = None
+            import openai
 
-            # Method 1: Standard approach
-            try:
-                client = AzureOpenAI(
-                    api_key=api_key,
-                    api_version=api_version,
-                    azure_endpoint=endpoint
-                )
-                result['method'] = 'standard'
-            except Exception as e:
-                result['standard_error'] = str(e)
+            result['openai_version'] = openai.__version__
 
-                # Method 2: Legacy approach
-                try:
-                    import openai
-                    openai.api_type = "azure"
-                    openai.api_key = api_key
-                    openai.api_base = endpoint
-                    openai.api_version = api_version
+            # Configure Azure OpenAI
+            openai.api_type = "azure"
+            openai.api_key = api_key
+            openai.api_base = endpoint
+            openai.api_version = api_version
 
-                    # Create wrapper
-                    class SimpleWrapper:
+            # Create wrapper for compatibility
+            class TestWrapper:
+                def __init__(self, deployment):
+                    self.deployment = deployment
+
+                class Chat:
+                    def __init__(self, deployment):
+                        self.deployment = deployment
+
+                    class Completions:
                         def __init__(self, deployment):
                             self.deployment = deployment
-                        class Chat:
-                            def __init__(self, deployment):
-                                self.deployment = deployment
-                            class Completions:
-                                def __init__(self, deployment):
-                                    self.deployment = deployment
-                                def create(self, model, messages, max_tokens=5):
-                                    return openai.ChatCompletion.create(
-                                        engine=self.deployment,
-                                        messages=messages,
-                                        max_tokens=max_tokens
-                                    )
-                            @property
-                            def completions(self):
-                                return self.Completions(self.deployment)
-                        @property
-                        def chat(self):
-                            return self.Chat(self.deployment)
 
-                    client = SimpleWrapper(deployment_name)
-                    result['method'] = 'legacy'
-                except Exception as e2:
-                    result['legacy_error'] = str(e2)
-                    raise Exception(f"Both methods failed: {e}, {e2}")
+                        def create(self, model, messages, max_tokens=5):
+                            return openai.ChatCompletion.create(
+                                engine=self.deployment,
+                                messages=messages,
+                                max_tokens=max_tokens
+                            )
 
-            if client:
-                result['client_created'] = True
+                    @property
+                    def completions(self):
+                        return self.Completions(self.deployment)
+
+                @property
+                def chat(self):
+                    return self.Chat(self.deployment)
+
+            client = TestWrapper(deployment_name)
+            result['client_created'] = True
+            result['method'] = 'v0.28_api'
         except Exception as e:
             result['client_error'] = f"{type(e).__name__}: {str(e)}"
             return jsonify(result)
