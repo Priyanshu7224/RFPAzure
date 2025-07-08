@@ -226,11 +226,20 @@ def debug_stock_sample():
         for item in stock_data[:5]:
             all_keys.update(item.keys())
 
+        # Get unique categories to see diversity
+        all_categories = set()
+        for item in stock_data:
+            cat = item.get('main_category', 'N/A')
+            if cat and cat != 'N/A':
+                all_categories.add(cat)
+
         return jsonify({
             'total_records': len(stock_data),
             'sample_records': sample_data,
             'first_product_code': stock_data[0].get('product_code', 'N/A') if stock_data else 'N/A',
             'categories_sample': [item.get('main_category', 'N/A') for item in stock_data[:5]],
+            'unique_categories': sorted(list(all_categories)),
+            'category_count': len(all_categories),
             'all_fields': sorted(list(all_keys)),
             'field_analysis': {
                 'has_main_category': any('main_category' in item for item in stock_data[:10]),
